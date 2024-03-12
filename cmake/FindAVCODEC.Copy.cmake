@@ -1,10 +1,12 @@
 find_path(AVCODEC_INCLUDE_DIR
         NAMES libavcodec/avcodec.h
-        PATHS ${CMAKE_CURRENT_SOURCE_DIR}/../3rdpart/ffmpeg/include)
+        HINTS ${FFMPEG_PATH_ROOT}
+        PATH_SUFFIXES include)
 
 find_library(AVCODEC_LIBRARY
         NAMES avcodec
-        PATHS ${CMAKE_CURRENT_SOURCE_DIR}/../3rdpart/ffmpeg/lib)
+        HINTS ${FFMPEG_PATH_ROOT}
+        PATH_SUFFIXES bin lib)
 
 set(AVCODEC_LIBRARIES ${AVCODEC_LIBRARY})
 set(AVCODEC_INCLUDE_DIRS ${AVCODEC_INCLUDE_DIR})

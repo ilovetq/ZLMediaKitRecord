@@ -1,11 +1,13 @@
 find_path(AVUTIL_INCLUDE_DIR
         NAMES libavutil/avutil.h
-        PATHS ${CMAKE_CURRENT_SOURCE_DIR}/../3rdpart/ffmpeg/include)
+        HINTS ${FFMPEG_PATH_ROOT}
+        PATH_SUFFIXES include)
 
 find_library(AVUTIL_LIBRARY
         NAMES avutil
-        PATHS ${CMAKE_CURRENT_SOURCE_DIR}/../3rdpart/ffmpeg/lib)
-        
+        HINTS ${FFMPEG_PATH_ROOT}
+        PATH_SUFFIXES bin lib)
+
 set(AVUTIL_LIBRARIES ${AVUTIL_LIBRARY})
 set(AVUTIL_INCLUDE_DIRS ${AVUTIL_INCLUDE_DIR})
 
