@@ -243,6 +243,18 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux")
   endif()
 endif()
 
+# 查找 libcurl
+find_package(CURL REQUIRED)
+
+if(CURL_FOUND)
+    # 包含 libcurl 头文件目录
+    include_directories(${CURL_INCLUDE_DIRS})
+    # 链接 libcurl 库
+    update_cached_list(MK_LINK_LIBRARIES ${CURL_LIBRARIES})
+else()
+    message(FATAL_ERROR "libcurl not found!")
+endif()
+
 # 多个模块依赖 ffmpeg 相关库, 统一查找
 # Multiple modules depend on ffmpeg related libraries, unified search
 if(ENABLE_FFMPEG)
