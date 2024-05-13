@@ -18,7 +18,7 @@
 #include "Network/Socket.h"
 #include "Extension/Track.h"
 #include "Record/Recorder.h"
-
+#include <curl/curl.h>
 namespace toolkit {
 class Session;
 } // namespace toolkit
@@ -309,6 +309,9 @@ bool equalMediaTuple(const MediaTuple& a, const MediaTuple& b);
  */
 class MediaSource: public TrackSource, public std::enable_shared_from_this<MediaSource> {
 public:
+    int delStreamProxy(std::string StreamUrl);
+    void threadDetectUrl();
+    
     static MediaSource& NullMediaSource();
     using Ptr = std::shared_ptr<MediaSource>;
 

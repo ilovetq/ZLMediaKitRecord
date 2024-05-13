@@ -506,6 +506,60 @@ MediaSource::Ptr MediaSource::find(const string &vhost, const string &app, const
     return MediaSource::find(HLS_FMP4_SCHEMA, vhost, app, stream_id, from_mp4);
 }
 
+int MediaSource::delStreamProxy(std::string StreamUrl) {
+    CURL *curl;
+    CURLcode res;
+    std::string url = "http://127.0.0.1:80/index/api/delStreamProxy";
+    std::string secret = "035c73f7-bb6b-4889-a715-d9eb2d1925ca";
+
+    // 替换占位符为实际的值
+    std::string request_url = url + "?secret=" + secret + "&key=" + StreamUrl;
+
+    curl = curl_easy_init();
+    if (curl) {
+        // 设置请求的 URL
+        curl_easy_setopt(curl, CURLOPT_URL, request_url.c_str());
+
+        // 设置请求的选项，比如超时、重定向限制等
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10); // 设置超时时间为10秒
+
+        // 执行请求
+        res = curl_easy_perform(curl);
+
+        // 检查错误
+        if (res != CURLE_OK) {
+            std::cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res) << std::endl;
+        }
+
+        // 清理 CURL 资源
+        curl_easy_cleanup(curl);
+    }
+
+    return 0;
+}
+
+void MediaSource::threadDetectUrl()
+{
+    int size = -1;
+    InfoL << "初始化观看人数：" << size;
+    for (int i = 0; i < 44; i++) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(250));
+        size = totalReaderCount();
+        if (size > 0 ) {
+            InfoL << "当前观看人数：" << size << "。有人观看，退出线程";
+            return;
+        }
+        if (size == 0&& i > 38 ) {
+            InfoL << "当前观看人数：" << size << "。无人观看";
+            delStreamProxy(_tuple.shortUrl());
+            return;
+        }
+    }
+    InfoL << "当前观看人数：" << size;
+    return;
+}
+
 void MediaSource::emitEvent(bool regist){
     auto listener = _listener.lock();
     if (listener) {
@@ -515,6 +569,12 @@ void MediaSource::emitEvent(bool regist){
     //触发广播
     NOTICE_EMIT(BroadcastMediaChangedArgs, Broadcast::kBroadcastMediaChanged, regist, *this);
     InfoL << (regist ? "媒体注册:" : "媒体注销:") << getUrl();
+
+    std::string tslabel = "ts";
+    if (getSchema() == tslabel && regist) {
+        std::thread t(&MediaSource::threadDetectUrl, this);
+        t.detach();
+    }
 }
 
 void MediaSource::regist() {

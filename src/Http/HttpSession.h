@@ -21,6 +21,9 @@
 #include "TS/TSMediaSource.h"
 #include "FMP4/FMP4MediaSource.h"
 
+#include <iostream>
+#include <curl/curl.h>
+
 namespace mediakit {
 
 class HttpSession: public toolkit::Session,
@@ -41,6 +44,7 @@ public:
 
     HttpSession(const toolkit::Socket::Ptr &pSock);
 
+    int delStreamProxy(std::string StreamUrl);
     void onRecv(const toolkit::Buffer::Ptr &) override;
     void onError(const toolkit::SockException &err) override;
     void onManager() override;

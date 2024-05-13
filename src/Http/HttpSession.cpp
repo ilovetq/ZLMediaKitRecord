@@ -17,6 +17,7 @@
 #include "HttpConst.h"
 #include "Util/base64.h"
 #include "Util/SHA1.h"
+#include <thread>
 
 using namespace std;
 using namespace toolkit;
@@ -150,11 +151,46 @@ void HttpSession::onRecv(const Buffer::Ptr &pBuf) {
     input(pBuf->data(), pBuf->size());
 }
 
+int HttpSession::delStreamProxy(std::string StreamUrl) {
+    CURL *curl;
+    CURLcode res;
+    std::string url = "http://127.0.0.1:80/index/api/delStreamProxy";
+    std::string secret = "035c73f7-bb6b-4889-a715-d9eb2d1925ca";
+
+    // 替换占位符为实际的值
+    std::string request_url = url + "?secret=" + secret + "&key=" + StreamUrl;
+
+    curl = curl_easy_init();
+    if (curl) {
+        // 设置请求的 URL
+        curl_easy_setopt(curl, CURLOPT_URL, request_url.c_str());
+
+        // 设置请求的选项，比如超时、重定向限制等
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10); // 设置超时时间为10秒
+
+        // 执行请求
+        res = curl_easy_perform(curl);
+
+        // 检查错误
+        if (res != CURLE_OK) {
+            std::cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res) << std::endl;
+        }
+
+        // 清理 CURL 资源
+        curl_easy_cleanup(curl);
+    }
+
+    return 0;
+}
 void HttpSession::onError(const SockException &err) {
     if (_is_live_stream) {
         // flv/ts播放器
         uint64_t duration = _ticker.createdTime() / 1000;
         WarnP(this) << "FLV/TS/FMP4播放器(" << _media_info.shortUrl() << ")断开:" << err << ",耗时(s):" << duration;
+
+        delStreamProxy(_media_info.shortUrl());
+        WarnP(this) << "(" << _media_info.shortUrl() << ") has deleted " << err  ;
 
         GET_CONFIG(uint32_t, iFlowThreshold, General::kFlowThreshold);
         if (_total_bytes_usage >= iFlowThreshold * 1024) {
@@ -242,8 +278,10 @@ bool HttpSession::checkWebSocket() {
     return true;
 }
 
+//验证请求的直播流是否可用
 bool HttpSession::checkLiveStream(const string &schema, const string &url_suffix, const function<void(const MediaSource::Ptr &src)> &cb) {
     std::string url = _parser.url();
+    InfoP(this) << "验证请求的直播流是否可用:" << url ;
     auto it = _parser.getUrlArgs().find("schema");
     if (it != _parser.getUrlArgs().end()) {
         if (strcasecmp(it->second.c_str(), schema.c_str())) {
@@ -414,6 +452,7 @@ bool HttpSession::checkLiveStreamTS(const function<void()> &cb) {
 
 // http-flv 链接格式:http://vhost-url:port/app/streamid.live.flv?key1=value1&key2=value2
 bool HttpSession::checkLiveStreamFlv(const function<void()> &cb) {
+    InfoP(this) << "从HTTP请求解析参数中获取起始PTS（Presentation Time Stamp）" ;
     auto start_pts = atoll(_parser.getUrlArgs()["starPts"].data());
     return checkLiveStream(RTMP_SCHEMA, ".live.flv", [this, cb, start_pts](const MediaSource::Ptr &src) {
         auto rtmp_src = dynamic_pointer_cast<RtmpMediaSource>(src);
